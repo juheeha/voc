@@ -142,6 +142,94 @@
         .refresh-btn:hover {
             background: #5a6fd8;
         }
+
+        .realtime-status {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .status-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .status-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .status-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 5px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .status-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .detailed-analysis {
+            grid-column: span 2;
+        }
+
+        .analysis-tabs {
+            display: flex;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #f0f2f5;
+        }
+
+        .tab-button {
+            background: none;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .tab-button.active {
+            border-bottom-color: #667eea;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .matrix-table {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #f0f2f5;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 5px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.3s ease;
+        }
     </style>
 </head>
 <body>
@@ -151,9 +239,29 @@
     </div>
 
     <div class="container">
+        <!-- 실시간 현황 카드들 -->
+        <div class="realtime-status">
+            <div class="status-card">
+                <div class="status-number" id="todayTotal">-</div>
+                <div class="status-label">오늘 총 VOC</div>
+            </div>
+            <div class="status-card">
+                <div class="status-number" id="lastHour">-</div>
+                <div class="status-label">최근 1시간</div>
+            </div>
+            <div class="status-card">
+                <div class="status-number" id="salesToday">-</div>
+                <div class="status-label">영업 VOC</div>
+            </div>
+            <div class="status-card">
+                <div class="status-number" id="retentionToday">-</div>
+                <div class="status-label">해지방어</div>
+            </div>
+        </div>
+
         <div class="data-refresh">
             <button class="refresh-btn" onclick="loadVOCData()">📊 데이터 새로고침</button>
-            <p><small>마지막 업데이트: <span id="lastUpdate">-</span></small></p>
+            <p><small>마지막 업데이트: <span id="lastUpdate">-</span> | 최근 VOC: <span id="lastVOCTime">-</span></small></p>
         </div>
 
         <!-- KPI 카드들 -->
@@ -194,11 +302,59 @@
                 </table>
             </div>
 
-            <!-- 월별 트렌드 차트 -->
-            <div class="card" style="grid-column: span 2;">
-                <h3>📈 월별 VOC 트렌드</h3>
-                <div class="chart-container">
-                    <canvas id="monthlyTrendChart"></canvas>
+            <!-- 상세 분석 탭 -->
+            <div class="card detailed-analysis">
+                <h3>📊 상세 분석</h3>
+                <div class="analysis-tabs">
+                    <button class="tab-button active" onclick="switchTab('monthly')">월별 트렌드</button>
+                    <button class="tab-button" onclick="switchTab('quarterly')">분기별 트렌드</button>
+                    <button class="tab-button" onclick="switchTab('detailed')">사유별 상세</button>
+                    <button class="tab-button" onclick="switchTab('matrix')">고객-사유 매트릭스</button>
+                </div>
+                
+                <div id="monthly-tab" class="tab-content active">
+                    <div class="chart-container">
+                        <canvas id="monthlyTrendChart"></canvas>
+                    </div>
+                </div>
+                
+                <div id="quarterly-tab" class="tab-content">
+                    <div class="chart-container">
+                        <canvas id="quarterlyTrendChart"></canvas>
+                    </div>
+                </div>
+                
+                <div id="detailed-tab" class="tab-content">
+                    <table class="stats-table">
+                        <thead>
+                            <tr>
+                                <th>VOC 유형</th>
+                                <th>건수</th>
+                                <th>영향 쇼핑몰</th>
+                                <th>평균 내용 길이</th>
+                                <th>비율</th>
+                            </tr>
+                        </thead>
+                        <tbody id="detailedAnalysisTable">
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div id="matrix-tab" class="tab-content">
+                    <div class="matrix-table">
+                        <table class="stats-table">
+                            <thead>
+                                <tr>
+                                    <th>쇼핑몰</th>
+                                    <th>VOC 유형</th>
+                                    <th>건수</th>
+                                    <th>비율</th>
+                                </tr>
+                            </thead>
+                            <tbody id="matrixTable">
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
@@ -360,9 +516,18 @@
         async function loadVOCData() {
             const data = await fetchVOCData();
             
+            // 실시간 현황 업데이트
+            updateRealtimeStatus(data.realtimeStatus);
+            
+            // 기존 기능 업데이트
             updateReasonStatsTable(data.reasonStats);
             updatePriorityTable(data.priorityData);
             updateCharts(data);
+            
+            // 새로운 상세 분석 업데이트
+            updateDetailedAnalysis(data.detailedReasons);
+            updateMatrixTable(data.customerReasonMatrix);
+            
             generateInsights(data);
             
             // 업데이트 시간 표시
@@ -370,6 +535,112 @@
                 new Date(data.lastUpdate).toLocaleString('ko-KR') : 
                 new Date().toLocaleString('ko-KR');
             document.getElementById('lastUpdate').textContent = updateTime;
+            
+            // 최근 VOC 시간 표시
+            if (data.realtimeStatus && data.realtimeStatus.last_voc_time) {
+                const lastVOCTime = new Date(data.realtimeStatus.last_voc_time).toLocaleString('ko-KR');
+                document.getElementById('lastVOCTime').textContent = lastVOCTime;
+            }
+        }
+
+        // 실시간 현황 업데이트
+        function updateRealtimeStatus(realtimeData) {
+            if (!realtimeData) return;
+            
+            document.getElementById('todayTotal').textContent = realtimeData.total_today || '0';
+            document.getElementById('lastHour').textContent = realtimeData.last_hour || '0';
+            
+            const salesTotal = (parseInt(realtimeData.k2k_sales_today) || 0) + 
+                              (parseInt(realtimeData.k2g_sales_today) || 0);
+            document.getElementById('salesToday').textContent = salesTotal;
+            document.getElementById('retentionToday').textContent = realtimeData.retention_today || '0';
+        }
+
+        // 탭 전환 기능
+        function switchTab(tabName) {
+            // 모든 탭 버튼에서 active 클래스 제거
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            // 선택된 탭 활성화
+            event.target.classList.add('active');
+            document.getElementById(tabName + '-tab').classList.add('active');
+            
+            // 분기별 차트가 선택된 경우 차트 그리기
+            if (tabName === 'quarterly') {
+                setTimeout(() => updateQuarterlyChart(), 100);
+            }
+        }
+
+        // 상세 분석 테이블 업데이트
+        function updateDetailedAnalysis(detailedData) {
+            if (!detailedData) return;
+            
+            const tbody = document.getElementById('detailedAnalysisTable');
+            tbody.innerHTML = '';
+            
+            const vocTypeNames = {
+                'K2K_SALES': 'K2K 영업',
+                'K2G_SALES': 'K2G 영업', 
+                'RETENTION': '해지방어/재영업',
+                'K2K_MARKET': 'K2K 마케팅',
+                'K2G_MARKET': 'K2G 마케팅',
+                'TOP_SALES': '참고사항',
+                'ETC': '기타'
+            };
+            
+            detailedData.forEach(item => {
+                const row = tbody.insertRow();
+                const typeName = vocTypeNames[item.voc_type] || item.voc_type;
+                
+                row.innerHTML = `
+                    <td>${typeName}</td>
+                    <td>${item.total_count.toLocaleString()}</td>
+                    <td>${item.unique_malls}</td>
+                    <td>${item.avg_content_length || '0'}</td>
+                    <td>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${item.percentage}%"></div>
+                        </div>
+                        ${item.percentage}%
+                    </td>
+                `;
+            });
+        }
+
+        // 고객-사유 매트릭스 테이블 업데이트
+        function updateMatrixTable(matrixData) {
+            if (!matrixData) return;
+            
+            const tbody = document.getElementById('matrixTable');
+            tbody.innerHTML = '';
+            
+            const vocTypeNames = {
+                'K2K_SALES': 'K2K 영업',
+                'K2G_SALES': 'K2G 영업', 
+                'RETENTION': '해지방어/재영업',
+                'K2K_MARKET': 'K2K 마케팅',
+                'K2G_MARKET': 'K2G 마케팅',
+                'TOP_SALES': '참고사항',
+                'ETC': '기타'
+            };
+            
+            matrixData.slice(0, 20).forEach(item => {
+                const row = tbody.insertRow();
+                const typeName = vocTypeNames[item.voc_type] || item.voc_type;
+                
+                row.innerHTML = `
+                    <td>${item.mall_id}</td>
+                    <td>${typeName}</td>
+                    <td>${item.count}</td>
+                    <td>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${item.percentage_within_mall}%"></div>
+                        </div>
+                        ${item.percentage_within_mall}%
+                    </td>
+                `;
+            });
         }
 
         // 주요 신청사유 테이블 업데이트
@@ -459,6 +730,69 @@
                     plugins: {
                         legend: {
                             position: 'top'
+                        }
+                    }
+                }
+            });
+        }
+
+        // 분기별 트렌드 차트 업데이트
+        function updateQuarterlyChart() {
+            const ctx = document.getElementById('quarterlyTrendChart').getContext('2d');
+            
+            if (charts.quarterly) {
+                charts.quarterly.destroy();
+            }
+            
+            // 샘플 분기별 데이터 (실제로는 API에서 가져옴)
+            const quarterlyData = [
+                {quarter: '2024-Q1', reason_category: 'K2K_SALES', count: 245},
+                {quarter: '2024-Q1', reason_category: 'K2G_SALES', count: 187},
+                {quarter: '2024-Q2', reason_category: 'K2K_SALES', count: 278},
+                {quarter: '2024-Q2', reason_category: 'K2G_SALES', count: 203},
+                {quarter: '2024-Q3', reason_category: 'K2K_SALES', count: 312},
+                {quarter: '2024-Q3', reason_category: 'K2G_SALES', count: 234}
+            ];
+            
+            const quarters = [...new Set(quarterlyData.map(item => item.quarter))].sort();
+            const categories = [...new Set(quarterlyData.map(item => item.reason_category))];
+            
+            const datasets = categories.map((category, index) => {
+                const data = quarters.map(quarter => {
+                    const found = quarterlyData.find(item => item.quarter === quarter && item.reason_category === category);
+                    return found ? found.count : 0;
+                });
+                
+                const colors = ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe'];
+                return {
+                    label: category,
+                    data: data,
+                    backgroundColor: colors[index % colors.length],
+                    borderColor: colors[index % colors.length],
+                    borderWidth: 2
+                };
+            });
+
+            charts.quarterly = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: quarters,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        x: {
+                            stacked: false
+                        },
+                        y: {
+                            stacked: false
                         }
                     }
                 }
