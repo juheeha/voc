@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VOC 관리 대시보드</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f8f9fc;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 0;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .header h1 {
+            font-size: 2.2em;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* 새로고침 섹션 */
+        .refresh-section {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .refresh-btn {
+            background: #48bb78;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background 0.3s ease;
+        }
+
+        .refresh-btn:hover {
+            background: #38a169;
+        }
+
+        .last-update {
+            color: #4a5568;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+
+        /* 요약 섹션 */
+        .summary-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .summary-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.07);
+            border-left: 5px solid #667eea;
+        }
+
+        .summary-card h3 {
+            color: #2d3748;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .summary-list {
+            list-style: none;
+            margin-bottom: 15px;
+        }
+
+        .summary-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .summary-list li:last-child {
+            border-bottom: none;
+        }
+
+        .count-badge {
+            background: #667eea;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+
+        .improvement-item {
+            background: #f7fafc;
+            border-left: 4px solid #38a169;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .improvement-item h4 {
+            color: #2d3748;
+            margin-bottom: 5px;
+        }
+
+        .improvement-item p {
+            color: #4a5568;
+            font-size: 0.9em;
+        }
+
+        .sales-message {
+            background: #fff5e6;
+            border-left: 4px solid #ed8936;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .sales-message h4 {
+            color: #2d3748;
+            margin-bottom: 5px;
+        }
+
+        .sales-message p {
+            color: #4a5568;
+            font-size: 0.9em;
+        }
+
+        /* VOC 리스트 섹션 */
+        .voc-section {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.07);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .section-title {
+            color: #2d3748;
+            font-size: 1.4em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* 필터 및 검색 */
+        .filters {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .filter-group label {
+            font-size: 0.85em;
+            color: #4a5568;
+            font-weight: 500;
+        }
+
+        .filter-input, .filter-select {
+            padding: 8px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 0.9em;
+            transition: border-color 0.3s ease;
+        }
+
+        .filter-input:focus, .filter-select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .search-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background 0.3s ease;
+            align-self: end;
+        }
+
+        .search-btn:hover {
+            background: #5a67d8;
+        }
+
+        /* VOC 테이블 */
+        .voc-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .voc-table th,
+        .voc-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .voc-table th {
+            background: #f7fafc;
+            font-weight: 600;
+            color: #2d3748;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .voc-table tbody tr:hover {
+            background: #f7fafc;
+        }
+
+        .voc-type {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .voc-type.k2k-sales { background: #e6fffa; color: #38a169; }
+        .voc-type.k2g-sales { background: #e6f7ff; color: #2b6cb0; }
+        .voc-type.retention { background: #fff2e6; color: #d69e2e; }
+        .voc-type.k2k-market { background: #f0fff4; color: #48bb78; }
+        .voc-type.k2g-market { background: #f0f9ff; color: #4299e1; }
+        .voc-type.top-sales { background: #faf5ff; color: #805ad5; }
+        .voc-type.etc { background: #f7fafc; color: #718096; }
+
+        .voc-content {
+            max-width: 300px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            cursor: pointer;
+        }
+
+        .voc-content:hover {
+            background: #edf2f7;
+            padding: 4px;
+            border-radius: 4px;
+        }
+
+        .mall-id {
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .date-text {
+            color: #4a5568;
+            font-size: 0.9em;
+        }
+
+        /* 페이지네이션 */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .page-btn {
+            padding: 8px 12px;
+            border: 1px solid #e2e8f0;
+            background: white;
+            color: #4a5568;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .page-btn:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .page-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .page-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* 로딩 및 모달 */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #4a5568;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 15px;
+        }
+
+        .close {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: #667eea;
+        }
+
+        .error-message {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 10px;
+            border-radius: 6px;
+            margin: 10px 0;
+            border-left: 4px solid #e53e3e;
+        }
+
+        @media (max-width: 768px) {
+            .summary-section {
+                grid-template-columns: 1fr;
+            }
+            
+            .filters {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .section-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .voc-table {
+                font-size: 0.85em;
+            }
+            
+            .voc-content {
+                max-width: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📊 VOC 관리 대시보드</h1>
+        <p>주요 신청사유 분석 · 서비스 고도화 · 영업메시지 강화</p>
+    </div>
+
+    <div class="container">
+        <!-- 새로고침 섹션 -->
+        <div class="refresh-section">
+            <button class="refresh-btn" onclick="loadDashboardData()">🔄 데이터 새로고침</button>
+            <div class="last-update">마지막 업데이트: <span id="lastUpdate">-</span></div>
+        </div>
+
+        <!-- 요약 섹션 -->
+        <div class="summary-section">
+            <!-- 주요 신청사유 -->
+            <div class="summary-card">
+                <h3>🔥 주요 신청사유</h3>
+                <ul class="summary-list" id="reasonSummary">
+                    <li>K2K 영업 <span class="count-badge">245건 (28.5%)</span></li>
+                    <li>K2G 영업 <span class="count-badge">187건 (21.7%)</span></li>
+                    <li>해지방어 <span class="count-badge">156건 (18.1%)</span></li>
+                    <li>K2K 마케팅 <span class="count-badge">98건 (11.4%)</span></li>
+                    <li>K2G 마케팅 <span class="count-badge">76건 (8.8%)</span></li>
+                </ul>
+            </div>
+
+            <!-- 서비스 고도화 개선점 -->
+            <div class="summary-card">
+                <h3>⚡ 서비스 고도화 개선점</h3>
+                <div id="improvementPoints">
+                    <div class="improvement-item">
+                        <h4>K2K 영업 프로세스 최적화</h4>
+                        <p>최근 30일간 245건의 K2K 영업 VOC가 발생했습니다. 영업 스크립트 개선 및 FAQ 구축을 통해 고객 만족도를 높일 수 있습니다.</p>
+                    </div>
+                    <div class="improvement-item">
+                        <h4>K2G 영업 전략 강화</h4>
+                        <p>글로벌 영업 관련 VOC 187건이 접수되었습니다. 해외 진출 가이드 제작 및 다국어 지원 서비스 확대가 필요합니다.</p>
+                    </div>
+                    <div class="improvement-item">
+                        <h4>고객 유지 전략 개선</h4>
+                        <p>해지방어 관련 VOC 156건이 발생했습니다. 맞춤형 혜택 및 서비스 제안으로 이탈률을 줄일 수 있습니다.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 영업 메시지 강화 -->
+            <div class="summary-card">
+                <h3>💬 영업 메시지 강화</h3>
+                <div id="salesMessages">
+                    <div class="sales-message">
+                        <h4>K2K 영업 메시지 강화</h4>
+                        <p>"국내 시장 성공 사례와 맞춤형 솔루션을 제안하여 고객의 비즈니스 성장을 지원합니다. 최근 245건의 문의를 통해 파악된 고객 니즈를 반영한 차별화된 서비스를 제공하겠습니다."</p>
+                    </div>
+                    <div class="sales-message">
+                        <h4>K2G 영업 메시지 강화</h4>
+                        <p>"글로벌 진출의 꿈을 현실로! 해외 시장 진출을 위한 원스톱 솔루션과 현지화 지원 서비스로 성공적인 해외 진출을 도와드립니다."</p>
+                    </div>
+                    <div class="sales-message">
+                        <h4>고객 유지 메시지 강화</h4>
+                        <p>"함께 성장해온 파트너십을 더욱 견고하게! 고객님의 성공이 저희의 성공입니다. 새로운 혜택과 서비스로 더 나은 비즈니스 환경을 제공하겠습니다."</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VOC 상세 리스트 섹션 -->
+        <div class="voc-section">
+            <div class="section-header">
+                <h2 class="section-title">📋 업체별 상세 VOC</h2>
+                
+                <div class="filters">
+                    <div class="filter-group">
+                        <label>쇼핑몰 ID</label>
+                        <input type="text" class="filter-input" id="mallFilter" placeholder="mall66">
+                    </div>
+                    <div class="filter-group">
+                        <label>VOC 유형</label>
+                        <select class="filter-select" id="typeFilter">
+                            <option value="">전체</option>
+                            <option value="K2K_SALES">K2K 영업</option>
+                            <option value="K2G_SALES">K2G 영업</option>
+                            <option value="RETENTION">해지방어</option>
+                            <option value="K2K_MARKET">K2K 마케팅</option>
+                            <option value="K2G_MARKET">K2G 마케팅</option>
+                            <option value="TOP_SALES">참고</option>
+                            <option value="ETC">기타</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>기간</label>
+                        <select class="filter-select" id="periodFilter">
+                            <option value="7">최근 7일</option>
+                            <option value="30" selected>최근 30일</option>
+                            <option value="90">최근 90일</option>
+                            <option value="365">최근 1년</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>검색어</label>
+                        <input type="text" class="filter-input" id="searchFilter" placeholder="VOC 내용 검색">
+                    </div>
+                    <button class="search-btn" onclick="applyFilters()">검색</button>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table class="voc-table">
+                    <thead>
+                        <tr>
+                            <th>번호</th>
+                            <th>쇼핑몰 ID</th>
+                            <th>VOC 유형</th>
+                            <th>VOC 내용</th>
+                            <th>등록일</th>
+                        </tr>
+                    </thead>
+                    <tbody id="vocTableBody">
+                        <tr>
+                            <td>27174</td>
+                            <td class="mall-id">mall66</td>
+                            <td><span class="voc-type k2k-sales">K2K 영업</span></td>
+                            <td class="voc-content" onclick="showVOCDetail('27174')" title="클릭하여 상세 내용 보기">
+                                대표님 통화 ㄴ pro글로벌서비스 안내 ㄴ 신청의사 확인 o ㄴ 모델하우스 발송 요청 >> Y ㄴ 해외판매 계획 있는데 pg는 어떻게 되냐 하심 > 엑심베이 가입비 지원해드림...
+                            </td>
+                            <td class="date-text">2024-01-15 14:30</td>
+                        </tr>
+                        <tr>
+                            <td>27173</td>
+                            <td class="mall-id">mall77</td>
+                            <td><span class="voc-type k2g-sales">K2G 영업</span></td>
+                            <td class="voc-content" onclick="showVOCDetail('27173')" title="클릭하여 상세 내용 보기">
+                                해외 진출 문의 관련 상담 진행. 일본 시장 진출 계획 있으시다고 하심. 언어팩 및 결제 시스템 문의...
+                            </td>
+                            <td class="date-text">2024-01-15 13:45</td>
+                        </tr>
+                        <tr>
+                            <td>27172</td>
+                            <td class="mall-id">mall88</td>
+                            <td><span class="voc-type retention">해지방어</span></td>
+                            <td class="voc-content" onclick="showVOCDetail('27172')" title="클릭하여 상세 내용 보기">
+                                서비스 해지 관련 문의. 비용 부담 때문에 해지 고려 중. 할인 혜택이나 다른 요금제가 있는지 문의...
+                            </td>
+                            <td class="date-text">2024-01-15 12:20</td>
+                        </tr>
+                        <tr>
+                            <td>27171</td>
+                            <td class="mall-id">mall99</td>
+                            <td><span class="voc-type k2k-market">K2K 마케팅</span></td>
+                            <td class="voc-content" onclick="showVOCDetail('27171')" title="클릭하여 상세 내용 보기">
+                                마케팅 도구 사용법 문의. 네이버 쇼핑 연동 및 광고 설정 관련 도움 요청...
+                            </td>
+                            <td class="date-text">2024-01-15 11:15</td>
+                        </tr>
+                        <tr>
+                            <td>27170</td>
+                            <td class="mall-id">mall55</td>
+                            <td><span class="voc-type k2g-market">K2G 마케팅</span></td>
+                            <td class="voc-content" onclick="showVOCDetail('27170')" title="클릭하여 상세 내용 보기">
+                                글로벌 마케팅 관련 문의. 구글 애즈 연동 및 페이스북 마케팅 도구 사용법 문의...
+                            </td>
+                            <td class="date-text">2024-01-15 10:30</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 페이지네이션 -->
+            <div class="pagination" id="pagination">
+                <button class="page-btn">이전</button>
+                <button class="page-btn active">1</button>
+                <button class="page-btn">2</button>
+                <button class="page-btn">3</button>
+                <button class="page-btn">다음</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- VOC 상세 모달 -->
+    <div id="vocModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>VOC 상세 내용</h3>
+                <span class="close">&times;</span>
+            </div>
+            <div id="modalContent">
+                <div style="margin-bottom: 15px;">
+                    <strong>VOC 번호:</strong> 27174
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <strong>쇼핑몰 ID:</strong> mall66
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <strong>VOC 유형:</strong> K2K 영업
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <strong>등록일:</strong> 2024-01-15 14:30
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <strong>VOC 내용:</strong>
+                </div>
+                <div style="background: #f7fafc; padding: 15px; border-radius: 8px; white-space: pre-wrap; line-height: 1.6;">
+대표님 통화
+
+ㄴ pro글로벌서비스 안내
+
+ㄴ 신청의사 확인 o
+
+ㄴ 모델하우스 발송 요청 >> Y
+
+ㄴ 해외판매 계획 있는데 pg는 어떻게 되냐 하심 > 엑심베이 가입비 지원해드림 
+ㄴ 글로벌 프로 이용시 영문,일문몰 구축해드리고 있음 안내
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 전역 변수
+        let currentPage = 1;
+        let totalPages = 5;
+        let currentFilters = {};
+
+        // VOC 유형 매핑
+        const vocTypeNames = {
+            'K2K_SALES': 'K2K 영업',
+            'K2G_SALES': 'K2G 영업',
+            'RETENTION': '해지방어',
+            'K2K_MARKET': 'K2K 마케팅',
+            'K2G_MARKET': 'K2G 마케팅',
+            'TOP_SALES': '참고',
+            'ETC': '기타'
+        };
+
+        // VOC 유형 CSS 클래스 매핑
+        const vocTypeCssClass = {
+            'K2K_SALES': 'k2k-sales',
+            'K2G_SALES': 'k2g-sales',
+            'RETENTION': 'retention',
+            'K2K_MARKET': 'k2k-market',
+            'K2G_MARKET': 'k2g-market',
+            'TOP_SALES': 'top-sales',
+            'ETC': 'etc'
+        };
+
+        // 페이지 로드 시 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            setupEventListeners();
+            updateLastUpdate();
+        });
+
+        // 이벤트 리스너 설정
+        function setupEventListeners() {
+            // 엔터 키로 검색
+            document.getElementById('searchFilter').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    applyFilters();
+                }
+            });
+
+            // 모달 닫기
+            document.querySelector('.close').addEventListener('click', function() {
+                document.getElementById('vocModal').style.display = 'none';
+            });
+
+            // 모달 외부 클릭으로 닫기
+            window.addEventListener('click', function(event) {
+                const modal = document.getElementById('vocModal');
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        }
+
+        // 데이터 새로고침
+        function loadDashboardData() {
+            // 실제 환경에서는 API 호출
+            console.log('데이터 새로고침 중...');
+            updateLastUpdate();
+            showMessage('데이터가 새로고침되었습니다.', 'success');
+        }
+
+        // 필터 적용
+        function applyFilters() {
+            currentPage = 1;
+            currentFilters = {
+                mall_id: document.getElementById('mallFilter').value.trim(),
+                voc_type: document.getElementById('typeFilter').value,
+                period: document.getElementById('periodFilter').value,
+                search: document.getElementById('searchFilter').value.trim()
+            };
+            
+            console.log('필터 적용:', currentFilters);
+            showMessage('필터가 적용되었습니다.', 'info');
+        }
+
+        // VOC 상세 내용 모달 표시
+        function showVOCDetail(vocNo) {
+            // 실제 환경에서는 API 호출로 상세 정보 가져오기
+            document.getElementById('vocModal').style.display = 'block';
+        }
+
+        // 페이지 변경
+        function changePage(page) {
+            if (page < 1 || page > totalPages) return;
+            
+            currentPage = page;
+            console.log('페이지 변경:', page);
+            showMessage(`${page}페이지로 이동했습니다.`, 'info');
+        }
+
+        // 마지막 업데이트 시간 갱신
+        function updateLastUpdate() {
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleString('ko-KR');
+        }
+
+        // 메시지 표시
+        function showMessage(message, type = 'info') {
+            // 기존 메시지 제거
+            const existingMessage = document.querySelector('.message');
+            if (existingMessage) {
+                existingMessage.remove();
+            }
+
+            // 새 메시지 생성
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            messageDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 12px 20px;
+                border-radius: 6px;
+                color: white;
+                font-weight: 500;
+                z-index: 1001;
+                animation: slideIn 0.3s ease;
+            `;
+
+            switch (type) {
+                case 'success':
+                    messageDiv.style.background = '#48bb78';
+                    break;
+                case 'error':
+                    messageDiv.style.background = '#f56565';
+                    break;
+                case 'info':
+                default:
+                    messageDiv.style.background = '#4299e1';
+                    break;
+            }
+
+            messageDiv.textContent = message;
+            document.body.appendChild(messageDiv);
+
+            // 3초 후 자동 제거
+            setTimeout(() => {
+                if (messageDiv.parentNode) {
+                    messageDiv.remove();
+                }
+            }, 3000);
+        }
+
+        // CSS 애니메이션 추가
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
