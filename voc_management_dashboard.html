@@ -646,7 +646,7 @@
             updateSalesMessages(data.salesMessages || []);
         }
 
-        // 주요 신청사유 업데이트
+        // 주요 신청사유 업데이트 (VOC 내용 기반)
         function updateReasonSummary(reasonStats) {
             const container = document.getElementById('reasonSummary');
             
@@ -656,10 +656,11 @@
             }
             
             container.innerHTML = reasonStats.slice(0, 5).map(item => {
-                const typeName = vocTypeNames[item.voc_type] || item.voc_type;
+                // VOC 내용에서 추출된 신청사유 사용
+                const reasonName = item.reason || item.voc_type || '기타';
                 return `
                     <li>
-                        <span>${typeName}</span>
+                        <span>${reasonName}</span>
                         <span class="count-badge">${item.count}건 (${item.percentage}%)</span>
                     </li>
                 `;

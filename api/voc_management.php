@@ -116,36 +116,58 @@ function getReasonStats($db) {
     }
 }
 
-// VOC 내용에서 신청사유 키워드 추출
+// VOC 내용에서 신청사유 키워드 추출 (우선순위 기반)
 function extractReasonsFromContent($content) {
     $reasons = [];
     
-    // 주요 키워드 패턴 정의
-    $keywordPatterns = [
-        '글로벌|해외|수출|외국|K2G|global' => '해외진출 문의',
-        '영업|상담|서비스 안내|제품 문의|도입' => '영업상담 문의',
-        '해지|탈퇴|중단|서비스 종료' => '해지 문의',
-        '결제|요금|비용|가격|할인|무료' => '요금/결제 문의',
-        '마케팅|광고|홍보|SEO|검색' => '마케팅 문의',
-        '기술|개발|API|연동|설정' => '기술지원 문의',
-        '교육|사용법|매뉴얼|가이드|튜토리얼' => '사용법 문의',
-        '오류|에러|문제|장애|버그' => '오류 신고',
-        '개선|요청|건의|제안|추가' => '개선 요청',
-        '계정|로그인|회원|권한|접속' => '계정 문의',
-        '디자인|템플릿|테마|UI|레이아웃' => '디자인 문의',
-        '배송|물류|재고|주문|결제시스템' => '쇼핑몰 운영',
-        '모바일|앱|반응형|Mobile' => '모바일 관련',
-        '보안|SSL|인증|암호화' => '보안 문의',
-        '데이터|통계|분석|리포트|매출' => '데이터 분석'
+    // 우선순위별 키워드 패턴 정의 (높은 우선순위부터)
+    $priorityPatterns = [
+        // 1순위: 구체적인 서비스/기능 관련
+        [
+            'pattern' => '글로벌|해외|수출|외국|K2G|global|일본|중국|미국|영문몰|일문몰|다국어|현지화|해외판매|해외진출|엑심베이',
+            'reason' => '해외진출/글로벌 문의'
+        ],
+        [
+            'pattern' => '결제|요금|비용|가격|할인|무료|pg|결제시스템|카드|계좌|청구|요금제|할인혜택',
+            'reason' => '요금/결제 문의'
+        ],
+        [
+            'pattern' => '마케팅|광고|홍보|SEO|검색|네이버쇼핑|구글애즈|페이스북|인스타그램|SNS마케팅',
+            'reason' => '마케팅 도구 문의'
+        ],
+        [
+            'pattern' => 'API|연동|개발|기술|시스템|서버|데이터베이스|SSL|보안|백업|오류|에러|장애',
+            'reason' => '기술지원 문의'
+        ],
+        [
+            'pattern' => '해지|탈퇴|중단|서비스종료|계약해지|이용중단',
+            'reason' => '해지 문의'
+        ],
+        [
+            'pattern' => '사용법|매뉴얼|가이드|교육|튜토리얼|사용방법|설정방법',
+            'reason' => '사용법 문의'
+        ],
+        [
+            'pattern' => '디자인|템플릿|테마|UI|레이아웃|화면|모바일|반응형',
+            'reason' => '디자인/UI 문의'
+        ],
+        
+        // 2순위: 일반적인 영업 관련 (가장 마지막에 체크)
+        [
+            'pattern' => '영업|상담|서비스안내|제품문의|도입|계약|제안|문의|안내|신청',
+            'reason' => '일반 영업상담 문의'
+        ]
     ];
     
-    foreach ($keywordPatterns as $pattern => $reason) {
-        if (preg_match('/(' . $pattern . ')/iu', $content)) {
-            $reasons[] = $reason;
+    // 우선순위에 따라 패턴 매칭
+    foreach ($priorityPatterns as $priorityPattern) {
+        if (preg_match('/(' . $priorityPattern['pattern'] . ')/iu', $content)) {
+            $reasons[] = $priorityPattern['reason'];
+            break; // 첫 번째 매칭되는 것으로 분류하고 종료
         }
     }
     
-    // 키워드가 없는 경우 기본 분류
+    // 아무것도 매칭되지 않은 경우 기본 분류
     if (empty($reasons)) {
         if (mb_strlen($content) > 100) {
             $reasons[] = '상세 상담 문의';
@@ -154,19 +176,20 @@ function extractReasonsFromContent($content) {
         }
     }
     
-    return array_unique($reasons);
+    return $reasons;
 }
 
 // 기본 신청사유 (데이터가 없을 때)
 function getDefaultReasons() {
     return [
-        ['reason' => '영업상담 문의', 'count' => 245, 'percentage' => 28.5],
-        ['reason' => '해외진출 문의', 'count' => 187, 'percentage' => 21.7],
-        ['reason' => '요금/결제 문의', 'count' => 156, 'percentage' => 18.1],
-        ['reason' => '마케팅 문의', 'count' => 98, 'percentage' => 11.4],
-        ['reason' => '기술지원 문의', 'count' => 76, 'percentage' => 8.8],
-        ['reason' => '해지 문의', 'count' => 54, 'percentage' => 6.3],
-        ['reason' => '사용법 문의', 'count' => 32, 'percentage' => 3.7]
+        ['reason' => '해외진출/글로벌 문의', 'count' => 187, 'percentage' => 28.5],
+        ['reason' => '요금/결제 문의', 'count' => 156, 'percentage' => 23.7],
+        ['reason' => '일반 영업상담 문의', 'count' => 98, 'percentage' => 14.9],
+        ['reason' => '마케팅 도구 문의', 'count' => 76, 'percentage' => 11.6],
+        ['reason' => '기술지원 문의', 'count' => 54, 'percentage' => 8.2],
+        ['reason' => '사용법 문의', 'count' => 42, 'percentage' => 6.4],
+        ['reason' => '디자인/UI 문의', 'count' => 32, 'percentage' => 4.9],
+        ['reason' => '해지 문의', 'count' => 12, 'percentage' => 1.8]
     ];
 }
 
