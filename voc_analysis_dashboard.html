@@ -559,8 +559,8 @@
         .type-global { background: #e6f7ff; color: #2b6cb0; }
         .type-payment { background: #fff2e6; color: #d69e2e; }
         .type-sales { background: #e6fffa; color: #38a169; }
-        .type-marketing { background: #f0fff4; color: #48bb78; }
-        .type-support { background: #f0f9ff; color: #4299e1; }
+        .type-automation { background: #f0fff4; color: #48bb78; }
+        .type-multichannel { background: #f0f9ff; color: #4299e1; }
         .type-etc { background: #f7fafc; color: #718096; }
 
         .voc-content {
@@ -975,7 +975,7 @@
                     </div>
                     <div class="sales-message">
                         <h4>브랜드 확장 메시지</h4>
-                        <p>"자사몰에서 시작해 전국구 브랜드로! 네이버/쿠팡/11번가 등 주요 마켓을 한 번에 통합 관리하세요. 하나의 관리자에서 모든 채널을 운영하며 브랜드를 확장할 수 있습니다."</p>
+                        <p>"국내를 넘어 글로벌로! 네이버/쿠팡/11번가 등 주요 마켓을 한 번에 통합 관리하세요. 하나의 관리자에서 모든 채널을 운영하며 브랜드를 확장할 수 있습니다."</p>
                     </div>
                 </div>
             </div>
@@ -1180,6 +1180,7 @@
             setupEventListeners();
             updateLastUpdate();
             showReasonDetail(1); // 첫 번째 사유 자동 표시
+            loadVOCList(); // VOC 리스트 로드
         });
 
         // 이벤트 리스너 설정
@@ -1254,8 +1255,57 @@
         }
 
         // VOC 상세 모달 표시
-        function showVOCDetail(vocNo) {
-            const vocData = {
+        async function showVOCDetail(vocNo) {
+            try {
+                const response = await fetch(`api/voc_analysis_api.php?type=voc_detail&voc_no=${vocNo}`);
+                const result = await response.json();
+
+                if (!result.success) {
+                    showToast('VOC 상세 정보를 불러올 수 없습니다.', 'error');
+                    return;
+                }
+
+                const voc = result.data;
+
+                const reasonNames = {
+                    'global': '해외진출/글로벌 서비스',
+                    'payment': '요금/결제 시스템',
+                    'sales': '일반 영업상담',
+                    'automation': '운영 효율화/자동화',
+                    'multichannel': '브랜드 확장/멀티채널 판매'
+                };
+
+                const reasonName = reasonNames[voc.extracted_reason] || '기타';
+
+                const modalContent = `
+                    <div class="modal-detail">
+                        <strong>VOC 번호:</strong> ${voc.sales_voc_no}
+                    </div>
+                    <div class="modal-detail">
+                        <strong>쇼핑몰 ID:</strong> ${voc.mall_id || '-'}
+                    </div>
+                    <div class="modal-detail">
+                        <strong>신청사유:</strong> ${reasonName}
+                    </div>
+                    <div class="modal-detail">
+                        <strong>등록일:</strong> ${voc.reg_date || '-'}
+                    </div>
+                    <div style="margin-bottom: 15px; margin-top: 20px;">
+                        <strong style="font-size: 1.1em; color: #2d3748;">VOC 내용:</strong>
+                    </div>
+                    <div class="modal-content-text">${voc.voc || '내용 없음'}</div>
+                `;
+
+                document.getElementById('modalContent').innerHTML = modalContent;
+                document.getElementById('vocModal').style.display = 'block';
+            } catch (error) {
+                console.error('VOC 상세 조회 오류:', error);
+                showToast('VOC 상세 정보를 불러오는 중 오류가 발생했습니다.', 'error');
+            }
+        }
+
+        // 기존 샘플 데이터 (fallback용)
+        const vocSampleData = {
                 27174: {
                     mall_id: 'mall66',
                     reason: '해외진출/글로벌 서비스',
@@ -1331,32 +1381,88 @@
 
 ※ 키워드 분석: 'API', '연동', '개발자', '기술' 등이 감지되어 '기술지원/API 연동'으로 분류되었습니다.`
                 }
+            }; // vocSampleData 끝
+
+        // VOC 리스트 로드
+        async function loadVOCList(filters = {}) {
+            try {
+                const params = new URLSearchParams({
+                    type: 'voc_list',
+                    page: currentPage,
+                    ...filters
+                });
+
+                const response = await fetch(`api/voc_analysis_api.php?${params}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    updateVOCTable(data.data);
+                    updatePagination(data.pagination);
+                } else {
+                    showToast('데이터 로드 실패: ' + (data.error || '알 수 없는 오류'), 'error');
+                }
+            } catch (error) {
+                console.error('VOC 리스트 로드 오류:', error);
+                showToast('데이터 로드 중 오류가 발생했습니다.', 'error');
+            }
+        }
+
+        // VOC 테이블 업데이트
+        function updateVOCTable(vocList) {
+            const tbody = document.getElementById('vocTableBody');
+            if (!vocList || vocList.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px;">데이터가 없습니다.</td></tr>';
+                return;
+            }
+
+            const reasonNames = {
+                'global': '해외진출',
+                'payment': '요금/결제',
+                'sales': '일반 영업상담',
+                'automation': '운영 효율화',
+                'multichannel': '브랜드 확장'
             };
 
-            const voc = vocData[vocNo];
-            if (!voc) return;
+            tbody.innerHTML = vocList.map(voc => {
+                const reasonKey = voc.extracted_reason || 'sales';
+                const reasonName = reasonNames[reasonKey] || '기타';
+                const reasonClass = `type-${reasonKey}`;
 
-            const modalContent = `
-                <div class="modal-detail">
-                    <strong>VOC 번호:</strong> ${vocNo}
-                </div>
-                <div class="modal-detail">
-                    <strong>쇼핑몰 ID:</strong> ${voc.mall_id}
-                </div>
-                <div class="modal-detail">
-                    <strong>신청사유:</strong> ${voc.reason}
-                </div>
-                <div class="modal-detail">
-                    <strong>등록일:</strong> ${voc.date}
-                </div>
-                <div style="margin-bottom: 15px; margin-top: 20px;">
-                    <strong style="font-size: 1.1em; color: #2d3748;">VOC 내용:</strong>
-                </div>
-                <div class="modal-content-text">${voc.content}</div>
-            `;
+                return `
+                    <tr>
+                        <td>${voc.sales_voc_no}</td>
+                        <td><span class="mall-id">${voc.mall_id || '-'}</span></td>
+                        <td><span class="voc-type-badge ${reasonClass}">${reasonName}</span></td>
+                        <td class="voc-content" onclick="showVOCDetail(${voc.sales_voc_no})" title="클릭하여 상세 내용 보기">
+                            ${voc.voc ? (voc.voc.substring(0, 100) + '...') : '-'}
+                        </td>
+                        <td class="date-text">${voc.reg_date || '-'}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
 
-            document.getElementById('modalContent').innerHTML = modalContent;
-            document.getElementById('vocModal').style.display = 'block';
+        // 페이지네이션 업데이트
+        function updatePagination(pagination) {
+            if (!pagination) return;
+
+            totalPages = pagination.total_pages;
+            currentPage = pagination.page;
+
+            const paginationDiv = document.getElementById('pagination');
+            let html = `<button class="page-btn" onclick="changePage(${currentPage - 1})" ${currentPage <= 1 ? 'disabled' : ''}>◀ 이전</button>`;
+
+            // 페이지 번호 버튼 생성 (현재 페이지 기준 앞뒤 2개씩)
+            let startPage = Math.max(1, currentPage - 2);
+            let endPage = Math.min(totalPages, currentPage + 2);
+
+            for (let i = startPage; i <= endPage; i++) {
+                html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="changePage(${i})">${i}</button>`;
+            }
+
+            html += `<button class="page-btn" onclick="changePage(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''}>다음 ▶</button>`;
+
+            paginationDiv.innerHTML = html;
         }
 
         // 필터 적용
@@ -1368,11 +1474,8 @@
                 search: document.getElementById('searchFilter').value.trim()
             };
 
-            console.log('필터 적용:', filters);
-            showToast('필터가 적용되었습니다. 실제 환경에서는 API를 통해 데이터를 로드합니다.', 'info');
-
-            // 실제 환경에서는 여기서 API를 호출하여 데이터를 가져옵니다
-            // loadVOCList(filters);
+            currentPage = 1; // 필터 적용시 첫 페이지로
+            loadVOCList(filters);
         }
 
         // 페이지 변경
@@ -1381,14 +1484,16 @@
 
             currentPage = page;
 
-            // 페이지 버튼 활성화 상태 업데이트
-            document.querySelectorAll('.pagination .page-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
+            // 현재 필터 상태 가져오기
+            const filters = {
+                mall_id: document.getElementById('mallFilter').value.trim(),
+                reason: document.getElementById('reasonFilter').value,
+                period: document.getElementById('periodFilter').value,
+                search: document.getElementById('searchFilter').value.trim()
+            };
 
-            // 실제 환경에서는 여기서 데이터를 다시 로드
-            console.log(`${page}페이지로 이동`);
-            showToast(`${page}페이지로 이동했습니다.`, 'info');
+            // 데이터 다시 로드
+            loadVOCList(filters);
         }
 
         // 데이터 새로고침
